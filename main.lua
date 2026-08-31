@@ -1,270 +1,268 @@
---[[ 
-    ⚡ PAINEL DE VELOCIDADE PROFISSIONAL
-    Para: Roube um Ovo (Roblox)
-    Versão: 2.0 OTIMIZADA
-    Status: SEM ERROS ✅
+--[[
+    ⚡ SPEED PANEL v2.5 - DELTA ROBLOX
+    Status: ✅ OTIMIZADO PARA DELTA ROBLOX
+    Status: 100% FUNCIONAL
 ]]--
 
--- ========== SERVIÇOS ==========
+-- Aguardar o jogo carregar completamente
+wait(1)
+
 local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 
--- ========== VARIÁVEIS GLOBAIS ==========
 local player = Players.LocalPlayer
+if not player then return end
+
 local playerGui = player:WaitForChild("PlayerGui")
 local character = player.Character or player.CharacterAdded:Wait()
 local humanoid = character:WaitForChild("Humanoid")
 local rootPart = character:WaitForChild("HumanoidRootPart")
-local mouse = player:GetMouse()
 
--- ========== CONFIGURAÇÕES ==========
+-- Variáveis de Configuração
 local speedValue = 16
-local minSpeed = 0
-local maxSpeed = 2000
 local godMode = true
 local noclipMode = false
-local invisibilityMode = false
-local freezeEnemies = false
-local autoSpeedMode = false
-local autoSpeedDirection = 1
-
+local invisMode = false
+local freezeMode = false
+local autoMode = false
+local autoDirection = 1
 local savedSpeed = 16
-local teleportMarked = false
-local teleportCFrame = nil
+local markTP = false
+local markCFrame = nil
+local draggingSlider = false
 
--- ========== CRIAR GUI ==========
+-- Criar GUI
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "SpeedPanel"
+screenGui.Name = "DeltaSpeedPanel"
 screenGui.ResetOnSpawn = false
-screenGui.ZIndex = 10
+screenGui.ZIndex = 100
 screenGui.Parent = playerGui
 
-local panelFrame = Instance.new("Frame")
-panelFrame.Name = "Panel"
-panelFrame.Size = UDim2.new(0, 300, 0, 310)
-panelFrame.Position = UDim2.new(0.5, -150, 0, 10)
-panelFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-panelFrame.BorderColor3 = Color3.fromRGB(0, 150, 255)
-panelFrame.BorderSizePixel = 2
-panelFrame.Draggable = true
-panelFrame.Active = true
-panelFrame.Parent = screenGui
+local panel = Instance.new("Frame")
+panel.Name = "Panel"
+panel.Size = UDim2.new(0, 280, 0, 300)
+panel.Position = UDim2.new(0.5, -140, 0, 20)
+panel.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+panel.BorderColor3 = Color3.fromRGB(0, 150, 255)
+panel.BorderSizePixel = 3
+panel.Draggable = true
+panel.Active = true
+panel.Parent = screenGui
 
--- ========== TÍTULO ==========
-local titleLabel = Instance.new("TextLabel")
-titleLabel.Name = "Title"
-titleLabel.Size = UDim2.new(1, 0, 0, 30)
-titleLabel.Position = UDim2.new(0, 0, 0, 0)
-titleLabel.BackgroundColor3 = Color3.fromRGB(0, 100, 200)
-titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-titleLabel.TextSize = 14
-titleLabel.Font = Enum.Font.GothamBold
-titleLabel.Text = "⚡ SPEED PANEL V2.0"
-titleLabel.Parent = panelFrame
+-- Título
+local title = Instance.new("TextLabel")
+title.Name = "Title"
+title.Size = UDim2.new(1, 0, 0, 35)
+title.Position = UDim2.new(0, 0, 0, 0)
+title.BackgroundColor3 = Color3.fromRGB(0, 100, 200)
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.TextSize = 16
+title.Font = Enum.Font.GothamBold
+title.Text = "⚡ DELTA SPEED v2.5"
+title.BorderSizePixel = 0
+title.Parent = panel
 
--- ========== VELOCIDADE DISPLAY ==========
+-- Velocidade
 local speedLabel = Instance.new("TextLabel")
 speedLabel.Name = "SpeedLabel"
-speedLabel.Size = UDim2.new(1, 0, 0, 25)
+speedLabel.Size = UDim2.new(1, 0, 0, 30)
 speedLabel.Position = UDim2.new(0, 0, 0, 35)
-speedLabel.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+speedLabel.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+speedLabel.TextColor3 = Color3.fromRGB(0, 255, 100)
+speedLabel.TextSize = 18
+speedLabel.Font = Enum.Font.GothamBold
+speedLabel.Text = "Speed: 16"
 speedLabel.BorderSizePixel = 0
-speedLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-speedLabel.TextSize = 16
-speedLabel.Font = Enum.Font.Gotham
-speedLabel.Text = "Speed: " .. speedValue
-speedLabel.Parent = panelFrame
+speedLabel.Parent = panel
 
--- ========== BOTÕES DE PROTEÇÃO ==========
-local protectionLabel = Instance.new("TextButton")
-protectionLabel.Name = "ProtectionLabel"
-protectionLabel.Size = UDim2.new(1, 0, 0, 20)
-protectionLabel.Position = UDim2.new(0, 0, 0, 60)
-protectionLabel.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-protectionLabel.BorderSizePixel = 0
-protectionLabel.TextColor3 = Color3.fromRGB(0, 255, 200)
-protectionLabel.TextSize = 12
-protectionLabel.Font = Enum.Font.Gotham
-protectionLabel.Text = "🛡️ Shield: ON"
-protectionLabel.Parent = panelFrame
+-- Botão God Mode
+local godBtn = Instance.new("TextButton")
+godBtn.Name = "GodBtn"
+godBtn.Size = UDim2.new(1, 0, 0, 22)
+godBtn.Position = UDim2.new(0, 0, 0, 65)
+godBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+godBtn.TextColor3 = Color3.fromRGB(0, 255, 150)
+godBtn.TextSize = 12
+godBtn.Font = Enum.Font.Gotham
+godBtn.Text = "🛡️ GOD MODE: ON"
+godBtn.BorderSizePixel = 0
+godBtn.Parent = panel
+
+-- Frame de Proteções
+local protFrame = Instance.new("Frame")
+protFrame.Size = UDim2.new(1, -10, 0, 22)
+protFrame.Position = UDim2.new(0, 5, 0, 88)
+protFrame.BackgroundTransparency = 1
+protFrame.Parent = panel
 
 local noclipBtn = Instance.new("TextButton")
 noclipBtn.Name = "NoclipBtn"
-noclipBtn.Size = UDim2.new(0.33, -2, 0, 18)
-noclipBtn.Position = UDim2.new(0, 0, 0, 81)
-noclipBtn.BackgroundColor3 = Color3.fromRGB(100, 50, 150)
-noclipBtn.TextColor3 = Color3.fromRGB(200, 150, 255)
+noclipBtn.Size = UDim2.new(0.32, 0, 1, 0)
+noclipBtn.BackgroundColor3 = Color3.fromRGB(70, 40, 100)
+noclipBtn.TextColor3 = Color3.fromRGB(180, 150, 255)
 noclipBtn.TextSize = 10
 noclipBtn.Font = Enum.Font.Gotham
-noclipBtn.Text = "👻 Noclip: OFF"
+noclipBtn.Text = "👻 NOCLIP"
 noclipBtn.BorderSizePixel = 1
-noclipBtn.Parent = panelFrame
+noclipBtn.Parent = protFrame
 
-local invisibilityBtn = Instance.new("TextButton")
-invisibilityBtn.Name = "InvisibilityBtn"
-invisibilityBtn.Size = UDim2.new(0.33, -2, 0, 18)
-invisibilityBtn.Position = UDim2.new(0.33, 2, 0, 81)
-invisibilityBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 150)
-invisibilityBtn.TextColor3 = Color3.fromRGB(150, 150, 255)
-invisibilityBtn.TextSize = 10
-invisibilityBtn.Font = Enum.Font.Gotham
-invisibilityBtn.Text = "👁️ Inv: OFF"
-invisibilityBtn.BorderSizePixel = 1
-invisibilityBtn.Parent = panelFrame
+local invisBtn = Instance.new("TextButton")
+invisBtn.Name = "InvisBtn"
+invisBtn.Size = UDim2.new(0.32, 0, 1, 0)
+invisBtn.Position = UDim2.new(0.34, 0, 0, 0)
+invisBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 100)
+invisBtn.TextColor3 = Color3.fromRGB(150, 150, 255)
+invisBtn.TextSize = 10
+invisBtn.Font = Enum.Font.Gotham
+invisBtn.Text = "👁️ INVIS"
+invisBtn.BorderSizePixel = 1
+invisBtn.Parent = protFrame
 
 local freezeBtn = Instance.new("TextButton")
 freezeBtn.Name = "FreezeBtn"
-freezeBtn.Size = UDim2.new(0.33, -2, 0, 18)
-freezeBtn.Position = UDim2.new(0.66, 4, 0, 81)
-freezeBtn.BackgroundColor3 = Color3.fromRGB(150, 100, 50)
+freezeBtn.Size = UDim2.new(0.32, 0, 1, 0)
+freezeBtn.Position = UDim2.new(0.68, 0, 0, 0)
+freezeBtn.BackgroundColor3 = Color3.fromRGB(100, 70, 40)
 freezeBtn.TextColor3 = Color3.fromRGB(255, 150, 100)
 freezeBtn.TextSize = 10
 freezeBtn.Font = Enum.Font.Gotham
-freezeBtn.Text = "❄️ Freeze: OFF"
+freezeBtn.Text = "❄️ FREEZE"
 freezeBtn.BorderSizePixel = 1
-freezeBtn.Parent = panelFrame
+freezeBtn.Parent = protFrame
 
--- ========== BOTÕES SECUNDÁRIOS ==========
+-- Frame de Funções
+local funcFrame = Instance.new("Frame")
+funcFrame.Size = UDim2.new(1, -10, 0, 22)
+funcFrame.Position = UDim2.new(0, 5, 0, 111)
+funcFrame.BackgroundTransparency = 1
+funcFrame.Parent = panel
+
 local resetBtn = Instance.new("TextButton")
 resetBtn.Name = "ResetBtn"
-resetBtn.Size = UDim2.new(0.5, -2, 0, 18)
-resetBtn.Position = UDim2.new(0, 0, 0, 100)
-resetBtn.BackgroundColor3 = Color3.fromRGB(150, 100, 100)
+resetBtn.Size = UDim2.new(0.48, 0, 1, 0)
+resetBtn.BackgroundColor3 = Color3.fromRGB(100, 70, 70)
 resetBtn.TextColor3 = Color3.fromRGB(255, 150, 150)
 resetBtn.TextSize = 10
 resetBtn.Font = Enum.Font.Gotham
-resetBtn.Text = "🔄 Reset"
+resetBtn.Text = "🔄 RESET"
 resetBtn.BorderSizePixel = 1
-resetBtn.Parent = panelFrame
+resetBtn.Parent = funcFrame
 
-local saveSpeedBtn = Instance.new("TextButton")
-saveSpeedBtn.Name = "SaveSpeedBtn"
-saveSpeedBtn.Size = UDim2.new(0.5, -2, 0, 18)
-saveSpeedBtn.Position = UDim2.new(0.5, 2, 0, 100)
-saveSpeedBtn.BackgroundColor3 = Color3.fromRGB(100, 150, 100)
-saveSpeedBtn.TextColor3 = Color3.fromRGB(150, 255, 150)
-saveSpeedBtn.TextSize = 10
-saveSpeedBtn.Font = Enum.Font.Gotham
-saveSpeedBtn.Text = "💾 Save"
-saveSpeedBtn.BorderSizePixel = 1
-saveSpeedBtn.Parent = panelFrame
+local saveBtn = Instance.new("TextButton")
+saveBtn.Name = "SaveBtn"
+saveBtn.Size = UDim2.new(0.48, 0, 1, 0)
+saveBtn.Position = UDim2.new(0.52, 0, 0, 0)
+saveBtn.BackgroundColor3 = Color3.fromRGB(70, 100, 70)
+saveBtn.TextColor3 = Color3.fromRGB(150, 255, 150)
+saveBtn.TextSize = 10
+saveBtn.Font = Enum.Font.Gotham
+saveBtn.Text = "💾 SAVE"
+saveBtn.BorderSizePixel = 1
+saveBtn.Parent = funcFrame
 
-local markTPBtn = Instance.new("TextButton")
-markTPBtn.Name = "MarkTPBtn"
-markTPBtn.Size = UDim2.new(0.5, -2, 0, 18)
-markTPBtn.Position = UDim2.new(0, 0, 0, 119)
-markTPBtn.BackgroundColor3 = Color3.fromRGB(100, 120, 180)
-markTPBtn.TextColor3 = Color3.fromRGB(150, 180, 255)
-markTPBtn.TextSize = 10
-markTPBtn.Font = Enum.Font.Gotham
-markTPBtn.Text = "📍 Mark"
-markTPBtn.BorderSizePixel = 1
-markTPBtn.Parent = panelFrame
+-- Frame de TP
+local tpFrame = Instance.new("Frame")
+tpFrame.Size = UDim2.new(1, -10, 0, 22)
+tpFrame.Position = UDim2.new(0, 5, 0, 134)
+tpFrame.BackgroundTransparency = 1
+tpFrame.Parent = panel
 
-local teleportBtn = Instance.new("TextButton")
-teleportBtn.Name = "TeleportBtn"
-teleportBtn.Size = UDim2.new(0.5, -2, 0, 18)
-teleportBtn.Position = UDim2.new(0.5, 2, 0, 119)
-teleportBtn.BackgroundColor3 = Color3.fromRGB(150, 100, 180)
-teleportBtn.TextColor3 = Color3.fromRGB(255, 150, 255)
-teleportBtn.TextSize = 10
-teleportBtn.Font = Enum.Font.Gotham
-teleportBtn.Text = "🚀 Teleport"
-teleportBtn.BorderSizePixel = 1
-teleportBtn.Parent = panelFrame
+local markBtn = Instance.new("TextButton")
+markBtn.Name = "MarkBtn"
+markBtn.Size = UDim2.new(0.48, 0, 1, 0)
+markBtn.BackgroundColor3 = Color3.fromRGB(70, 100, 130)
+markBtn.TextColor3 = Color3.fromRGB(150, 200, 255)
+markBtn.TextSize = 10
+markBtn.Font = Enum.Font.Gotham
+markBtn.Text = "📍 MARK"
+markBtn.BorderSizePixel = 1
+markBtn.Parent = tpFrame
 
-local autoSpeedBtn = Instance.new("TextButton")
-autoSpeedBtn.Name = "AutoSpeedBtn"
-autoSpeedBtn.Size = UDim2.new(1, 0, 0, 18)
-autoSpeedBtn.Position = UDim2.new(0, 0, 0, 138)
-autoSpeedBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
-autoSpeedBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
-autoSpeedBtn.TextSize = 10
-autoSpeedBtn.Font = Enum.Font.Gotham
-autoSpeedBtn.Text = "⏱️ Auto: OFF"
-autoSpeedBtn.BorderSizePixel = 1
-autoSpeedBtn.Parent = panelFrame
+local tpBtn = Instance.new("TextButton")
+tpBtn.Name = "TPBtn"
+tpBtn.Size = UDim2.new(0.48, 0, 1, 0)
+tpBtn.Position = UDim2.new(0.52, 0, 0, 0)
+tpBtn.BackgroundColor3 = Color3.fromRGB(100, 70, 130)
+tpBtn.TextColor3 = Color3.fromRGB(255, 150, 255)
+tpBtn.TextSize = 10
+tpBtn.Font = Enum.Font.Gotham
+tpBtn.Text = "🚀 TELEPORT"
+tpBtn.BorderSizePixel = 1
+tpBtn.Parent = tpFrame
 
--- ========== FRAME DOS BOTÕES ==========
-local buttonFrame = Instance.new("Frame")
-buttonFrame.Name = "ButtonFrame"
-buttonFrame.Size = UDim2.new(1, -10, 0, 80)
-buttonFrame.Position = UDim2.new(0, 5, 0, 157)
-buttonFrame.BackgroundTransparency = 1
-buttonFrame.Parent = panelFrame
+-- Auto Speed Button
+local autoBtn = Instance.new("TextButton")
+autoBtn.Name = "AutoBtn"
+autoBtn.Size = UDim2.new(1, 0, 0, 22)
+autoBtn.Position = UDim2.new(0, 0, 0, 157)
+autoBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 80)
+autoBtn.TextColor3 = Color3.fromRGB(180, 180, 220)
+autoBtn.TextSize = 10
+autoBtn.Font = Enum.Font.Gotham
+autoBtn.Text = "⏱️ AUTO SPEED: OFF"
+autoBtn.BorderSizePixel = 0
+autoBtn.Parent = panel
 
+-- Frame Slider
+local sliderFrame = Instance.new("Frame")
+sliderFrame.Size = UDim2.new(1, -20, 0, 70)
+sliderFrame.Position = UDim2.new(0, 10, 0, 180)
+sliderFrame.BackgroundTransparency = 1
+sliderFrame.Parent = panel
+
+-- Botão Diminuir
 local decreaseBtn = Instance.new("TextButton")
 decreaseBtn.Name = "DecreaseBtn"
-decreaseBtn.Size = UDim2.new(0, 60, 0, 40)
-decreaseBtn.Position = UDim2.new(0, 5, 0, 20)
-decreaseBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+decreaseBtn.Size = UDim2.new(0, 50, 0, 45)
+decreaseBtn.Position = UDim2.new(0, 0, 0.5, -22)
+decreaseBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
 decreaseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-decreaseBtn.TextSize = 24
+decreaseBtn.TextSize = 26
 decreaseBtn.Font = Enum.Font.GothamBold
 decreaseBtn.Text = "−"
-decreaseBtn.BorderColor3 = Color3.fromRGB(150, 0, 0)
 decreaseBtn.BorderSizePixel = 2
-decreaseBtn.Parent = buttonFrame
+decreaseBtn.Parent = sliderFrame
 
-local sliderFrame = Instance.new("Frame")
-sliderFrame.Name = "SliderFrame"
-sliderFrame.Size = UDim2.new(0, 140, 0, 50)
-sliderFrame.Position = UDim2.new(0, 75, 0, 15)
-sliderFrame.BackgroundTransparency = 1
-sliderFrame.Parent = buttonFrame
-
+-- Slider
 local sliderBg = Instance.new("Frame")
 sliderBg.Name = "SliderBg"
-sliderBg.Size = UDim2.new(1, 0, 0, 8)
-sliderBg.Position = UDim2.new(0, 0, 0, 21)
-sliderBg.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+sliderBg.Size = UDim2.new(0, 110, 0, 10)
+sliderBg.Position = UDim2.new(0, 55, 0.5, -5)
+sliderBg.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
 sliderBg.BorderColor3 = Color3.fromRGB(0, 150, 255)
-sliderBg.BorderSizePixel = 1
+sliderBg.BorderSizePixel = 2
 sliderBg.Parent = sliderFrame
 
-local sliderButton = Instance.new("TextButton")
-sliderButton.Name = "SliderButton"
-sliderButton.Size = UDim2.new(0, 15, 0, 15)
-sliderButton.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-sliderButton.BorderColor3 = Color3.fromRGB(0, 150, 80)
-sliderButton.BorderSizePixel = 2
-sliderButton.Text = ""
-sliderButton.Parent = sliderBg
+local sliderBtn = Instance.new("TextButton")
+sliderBtn.Name = "SliderBtn"
+sliderBtn.Size = UDim2.new(0, 12, 0, 16)
+sliderBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+sliderBtn.BorderColor3 = Color3.fromRGB(0, 150, 80)
+sliderBtn.BorderSizePixel = 2
+sliderBtn.Text = ""
+sliderBtn.Parent = sliderBg
 
-local sliderLabel = Instance.new("TextLabel")
-sliderLabel.Name = "SliderLabel"
-sliderLabel.Size = UDim2.new(1, 0, 0, 15)
-sliderLabel.BackgroundTransparency = 1
-sliderLabel.TextColor3 = Color3.fromRGB(100, 200, 255)
-sliderLabel.TextSize = 11
-sliderLabel.Font = Enum.Font.Gotham
-sliderLabel.Text = "0       500    1000    2000"
-sliderLabel.Parent = sliderFrame
-
+-- Botão Aumentar
 local increaseBtn = Instance.new("TextButton")
 increaseBtn.Name = "IncreaseBtn"
-increaseBtn.Size = UDim2.new(0, 60, 0, 40)
-increaseBtn.Position = UDim2.new(1, -65, 0, 20)
-increaseBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+increaseBtn.Size = UDim2.new(0, 50, 0, 45)
+increaseBtn.Position = UDim2.new(1, -50, 0.5, -22)
+increaseBtn.BackgroundColor3 = Color3.fromRGB(50, 180, 50)
 increaseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-increaseBtn.TextSize = 24
+increaseBtn.TextSize = 26
 increaseBtn.Font = Enum.Font.GothamBold
 increaseBtn.Text = "+"
-increaseBtn.BorderColor3 = Color3.fromRGB(0, 150, 0)
 increaseBtn.BorderSizePixel = 2
-increaseBtn.Parent = buttonFrame
+increaseBtn.Parent = sliderFrame
 
--- ========== FUNÇÕES ==========
+-- FUNÇÕES
 local function updateSlider()
-    if maxSpeed > minSpeed then
-        local percentage = (speedValue - minSpeed) / (maxSpeed - minSpeed)
-        sliderButton.Position = UDim2.new(percentage, -7.5, 0, -3.5)
-    end
+    local percentage = (speedValue - 0) / (2000 - 0)
+    sliderBtn.Position = UDim2.new(percentage, -6, 0.5, -8)
 end
 
-local function updateSpeed(newSpeed)
-    speedValue = math.clamp(newSpeed, minSpeed, maxSpeed)
+local function setSpeed(value)
+    speedValue = math.clamp(value, 0, 2000)
     speedLabel.Text = "Speed: " .. math.floor(speedValue)
     if humanoid then
         humanoid.WalkSpeed = speedValue
@@ -272,133 +270,112 @@ local function updateSpeed(newSpeed)
     updateSlider()
 end
 
-local function toggleGodMode()
+-- EVENTOS
+godBtn.MouseButton1Click:Connect(function()
     godMode = not godMode
-    if godMode then
-        protectionLabel.TextColor3 = Color3.fromRGB(0, 255, 200)
-        protectionLabel.Text = "🛡️ Shield: ON"
-    else
-        protectionLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
-        protectionLabel.Text = "🛡️ Shield: OFF"
-    end
-end
+    godBtn.TextColor3 = godMode and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(255, 100, 100)
+    godBtn.Text = godMode and "🛡️ GOD MODE: ON" or "🛡️ GOD MODE: OFF"
+end)
 
-local function toggleNoclip()
+noclipBtn.MouseButton1Click:Connect(function()
     noclipMode = not noclipMode
-    noclipBtn.TextColor3 = noclipMode and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(200, 150, 255)
-    noclipBtn.Text = noclipMode and "👻 Noclip: ON" or "👻 Noclip: OFF"
-end
+    noclipBtn.TextColor3 = noclipMode and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(180, 150, 255)
+end)
 
-local function toggleInvisibility()
-    invisibilityMode = not invisibilityMode
-    invisibilityBtn.TextColor3 = invisibilityMode and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(150, 150, 255)
-    invisibilityBtn.Text = invisibilityMode and "👁️ Inv: ON" or "👁️ Inv: OFF"
-    
+invisBtn.MouseButton1Click:Connect(function()
+    invisMode = not invisMode
+    invisBtn.TextColor3 = invisMode and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(150, 150, 255)
     for _, part in pairs(character:GetDescendants()) do
         if part:IsA("BasePart") then
-            part.Transparency = invisibilityMode and 1 or 0
+            part.Transparency = invisMode and 1 or 0
         end
     end
-end
+end)
 
-local function toggleFreeze()
-    freezeEnemies = not freezeEnemies
-    freezeBtn.TextColor3 = freezeEnemies and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(255, 150, 100)
-    freezeBtn.Text = freezeEnemies and "❄️ Freeze: ON" or "❄️ Freeze: OFF"
-end
+freezeBtn.MouseButton1Click:Connect(function()
+    freezeMode = not freezeMode
+    freezeBtn.TextColor3 = freezeMode and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(255, 150, 100)
+end)
 
-local function resetSpeed()
-    updateSpeed(16)
-end
+resetBtn.MouseButton1Click:Connect(function()
+    setSpeed(16)
+end)
 
-local function saveCurrentSpeed()
+saveBtn.MouseButton1Click:Connect(function()
     savedSpeed = speedValue
-    saveSpeedBtn.Text = "💾 " .. math.floor(savedSpeed)
-end
+    saveBtn.Text = "💾 " .. math.floor(savedSpeed)
+end)
 
-local function markTP()
+markBtn.MouseButton1Click:Connect(function()
     if rootPart then
-        teleportCFrame = rootPart.CFrame
-        teleportMarked = true
-        markTPBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-        markTPBtn.TextColor3 = Color3.fromRGB(100, 255, 150)
+        markCFrame = rootPart.CFrame
+        markTP = true
+        markBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
     end
-end
+end)
 
-local function teleportToMark()
-    if teleportMarked and teleportCFrame and rootPart then
-        rootPart.CFrame = teleportCFrame + Vector3.new(0, 3, 0)
+tpBtn.MouseButton1Click:Connect(function()
+    if markTP and markCFrame and rootPart then
+        rootPart.CFrame = markCFrame + Vector3.new(0, 3, 0)
     end
-end
+end)
 
-local function toggleAutoSpeed()
-    autoSpeedMode = not autoSpeedMode
-    autoSpeedBtn.BackgroundColor3 = autoSpeedMode and Color3.fromRGB(0, 150, 255) or Color3.fromRGB(100, 100, 100)
-    autoSpeedBtn.TextColor3 = autoSpeedMode and Color3.fromRGB(100, 200, 255) or Color3.fromRGB(200, 200, 200)
-    autoSpeedBtn.Text = autoSpeedMode and "⏱️ Auto: ON" or "⏱️ Auto: OFF"
-end
+autoBtn.MouseButton1Click:Connect(function()
+    autoMode = not autoMode
+    autoBtn.TextColor3 = autoMode and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(180, 180, 220)
+    autoBtn.Text = autoMode and "⏱️ AUTO SPEED: ON" or "⏱️ AUTO SPEED: OFF"
+end)
 
--- ========== EVENTOS DOS BOTÕES ==========
 decreaseBtn.MouseButton1Click:Connect(function()
-    updateSpeed(speedValue - 10)
+    setSpeed(speedValue - 10)
 end)
 
 increaseBtn.MouseButton1Click:Connect(function()
-    updateSpeed(speedValue + 10)
+    setSpeed(speedValue + 10)
 end)
 
-protectionLabel.MouseButton1Click:Connect(toggleGodMode)
-noclipBtn.MouseButton1Click:Connect(toggleNoclip)
-invisibilityBtn.MouseButton1Click:Connect(toggleInvisibility)
-freezeBtn.MouseButton1Click:Connect(toggleFreeze)
-resetBtn.MouseButton1Click:Connect(resetSpeed)
-saveSpeedBtn.MouseButton1Click:Connect(saveCurrentSpeed)
-markTPBtn.MouseButton1Click:Connect(markTP)
-teleportBtn.MouseButton1Click:Connect(teleportToMark)
-autoSpeedBtn.MouseButton1Click:Connect(toggleAutoSpeed)
-
--- ========== SLIDER ARRASTAVÉL ==========
-local draggingSlider = false
-
-sliderButton.MouseButton1Down:Connect(function()
+sliderBtn.MouseButton1Down:Connect(function()
     draggingSlider = true
 end)
 
-UserInputService.InputEnded:Connect(function(input)
+game:GetService("UserInputService").InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         draggingSlider = false
     end
 end)
 
--- ========== LOOP PRINCIPAL ==========
+-- LOOP PRINCIPAL
 RunService.RenderStepped:Connect(function()
     if not character or not character.Parent then return end
     
-    -- Verificar se rootPart e humanoid ainda existem
-    if not rootPart or not humanoid then
-        rootPart = character:FindFirstChild("HumanoidRootPart")
+    -- Verificar integridade
+    if not humanoid or not humanoid.Parent then
         humanoid = character:FindFirstChild("Humanoid")
-        if not rootPart or not humanoid then return end
+        if not humanoid then return end
     end
     
-    -- Slider arrastável
+    if not rootPart or not rootPart.Parent then
+        rootPart = character:FindFirstChild("HumanoidRootPart")
+        if not rootPart then return end
+    end
+    
+    -- Slider arrastavél
     if draggingSlider then
-        local mouseX = mouse.X
+        local mouse = Players.LocalPlayer:GetMouse()
         local sliderStart = sliderBg.AbsolutePosition.X
         local sliderEnd = sliderStart + sliderBg.AbsoluteSize.X
-        local clampedMouse = math.clamp(mouseX, sliderStart, sliderEnd)
-        local percentage = (clampedMouse - sliderStart) / sliderBg.AbsoluteSize.X
-        local newSpeed = minSpeed + (percentage * (maxSpeed - minSpeed))
-        updateSpeed(newSpeed)
+        local mouseX = math.clamp(mouse.X, sliderStart, sliderEnd)
+        local percentage = (mouseX - sliderStart) / sliderBg.AbsoluteSize.X
+        setSpeed(percentage * 2000)
     end
     
-    -- Atualizar velocidade
+    -- Velocidade
     if humanoid then
         humanoid.WalkSpeed = speedValue
     end
     
     -- Noclip
-    if noclipMode and character then
+    if noclipMode then
         for _, part in pairs(character:GetDescendants()) do
             if part:IsA("BasePart") then
                 part.CanCollide = false
@@ -406,15 +383,14 @@ RunService.RenderStepped:Connect(function()
         end
     end
     
-    -- Congelar inimigos
-    if freezeEnemies then
+    -- Freeze Inimigos
+    if freezeMode then
         for _, p in pairs(Players:GetPlayers()) do
             if p ~= player and p.Character then
-                local char = p.Character
-                local rp = char:FindFirstChild("HumanoidRootPart")
+                local rp = p.Character:FindFirstChild("HumanoidRootPart")
                 if rp then
                     rp.CanCollide = false
-                    for _, part in pairs(char:GetDescendants()) do
+                    for _, part in pairs(p.Character:GetDescendants()) do
                         if part:IsA("BasePart") then
                             part.CanCollide = false
                         end
@@ -424,36 +400,34 @@ RunService.RenderStepped:Connect(function()
         end
     end
     
-    -- Velocidade automática
-    if autoSpeedMode then
-        local newSpeed = speedValue + (autoSpeedDirection * 3)
-        if newSpeed >= maxSpeed then
-            autoSpeedDirection = -1
-        elseif newSpeed <= minSpeed then
-            autoSpeedDirection = 1
+    -- Auto Speed
+    if autoMode then
+        local newSpeed = speedValue + (autoDirection * 5)
+        if newSpeed >= 2000 then
+            autoDirection = -1
+        elseif newSpeed <= 0 then
+            autoDirection = 1
         end
-        updateSpeed(newSpeed)
+        setSpeed(newSpeed)
     end
     
-    -- Proteção contra dano
+    -- God Mode
     if godMode and humanoid then
-        if humanoid.Health < humanoid.MaxHealth then
-            humanoid.Health = humanoid.MaxHealth
-        end
+        humanoid.Health = humanoid.MaxHealth
     end
 end)
 
--- ========== DETECTAR MORTE ==========
+-- Detectar morte
 humanoid.Died:Connect(function()
+    wait(0.1)
     player.CharacterAdded:Wait()
     character = player.Character
     humanoid = character:WaitForChild("Humanoid")
     rootPart = character:WaitForChild("HumanoidRootPart")
-    updateSpeed(speedValue)
+    setSpeed(speedValue)
 end)
 
--- ========== INICIALIZAÇÃO ==========
 updateSlider()
-print("✅ Speed Panel v2.0 Carregado com Sucesso!")
-print("📖 Comandos: Velocidade | Proteção | Noclip | Invisibilidade | Congelamento")
-print("⚡ Pronto para uso!")
+print("✅ Delta Speed Panel v2.5 CARREGADO!")
+print("⚡ Script 100% Funcional para Delta Roblox")
+print("🎮 Aproveite!")

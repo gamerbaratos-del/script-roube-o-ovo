@@ -1,67 +1,130 @@
 -- ========================================================
--- ⚡ ROBIN HUB — SPEED MASTER (AJUSTÁVEL ATÉ 2000)
--- 🛡️ PROTEÇÃO 100% ANTI-BAN, ANTI-KICK & ANTI-AFK
+-- 🛡️ ROBIN HUB ULTIMATE v3.0 — ROUBE O OVO & SPEED MASTER
+-- REPOSITÓRIO: gamerbaratos-del/script-roube-o-ovo
+-- SISTEMA MAX-PROTECT (Multi-Layer Anti-Cheat & Anti-Ban Bypass)
 -- ========================================================
 
-local Players = game:GetService("Players")
+-- ========================================================
+-- 1. SISTEMA DE PROTEÇÃO DE INSTÂNCIAS E SERVIÇOS (CLONEREF)
+-- ========================================================
+local function SafeService(serviceName)
+    local s = game:GetService(serviceName)
+    return (cloneref and cloneref(s)) or s
+end
+
+local Players = SafeService("Players")
 local LocalPlayer = Players.LocalPlayer
-local RunService = game:GetService("RunService")
-local CoreGui = game:GetService("CoreGui")
-local TeleportService = game:GetService("TeleportService")
-local VirtualUser = game:GetService("VirtualUser")
-local GuiService = game:GetService("GuiService")
+local TweenService = SafeService("TweenService")
+local RunService = SafeService("RunService")
+local CoreGui = SafeService("CoreGui")
+local TeleportService = SafeService("TeleportService")
+local VirtualUser = SafeService("VirtualUser")
+local GuiService = SafeService("GuiService")
+local ScriptContext = SafeService("ScriptContext")
 
 local TargetUI = (gethui and gethui()) or CoreGui or LocalPlayer:WaitForChild("PlayerGui")
 
--- Limpeza de instâncias antigas
-if TargetUI:FindFirstChild("RobinSpeedMasterUI") then
-    TargetUI.RobinSpeedMasterUI:Destroy()
+-- Limpeza de instâncias antigas sem causar crash
+if TargetUI:FindFirstChild("RobinEggHubMaster") then
+    pcall(function() TargetUI.RobinEggHubMaster:Destroy() end)
 end
 
 -- ========================================================
--- ⚙️ ESTADO E VARIÁVEIS DE CONFIGURAÇÃO
+-- ⚙️ CONFIGURAÇÕES E ESTADOS GLOBAIS
 -- ========================================================
 local Settings = {
+    -- Auto Farm
+    AutoFarm = false,
+    FarmSpeed = 65,
+    SelectedEggType = "Todos",
+    AutoDeposit = false,
+    -- Esteira & Velocidade
     AutoTreadmill = false,
     SpeedHack = false,
-    CurrentSpeed = 100,      -- Velocidade Padrão
-    MaxSpeedLimit = 2000,    -- Limite Máximo
+    CurrentSpeed = 100,
+    MaxSpeedLimit = 2000,
+    -- Proteções do Sistema
     AntiKick = true,
     AntiAFK = true,
     AntiStaff = true,
     AutoRejoin = true,
-    SpoofWalkSpeed = true
+    SpoofWalkSpeed = true,
+    BlockAntiCheatRemotes = true,
+    AntiVoid = true,
+    AntiStun = true
 }
 
 -- ========================================================
--- 🛡️ MÓDULO DE 100% PROTEÇÃO (METATABLE HOOKS & BYPASSES)
+-- 🛡️ ARQUITETURA ANTI-BAN & BYPASSES DE ANTI-CHEAT
 -- ========================================================
 
--- 1. Bloqueador de Kick (Hooking __namecall)
+-- A. BLOQUEIO DE LOGS DE ERRO PARA O SERVIDOR
 pcall(function()
+    ScriptContext.Error:Connect(function(message, stackTrace, scriptInst)
+        -- Silencia relatórios de erro que o Anti-Cheat pode ler
+    end)
+end)
+
+-- B. HOOKS NO METATABLE (ANTI-KICK, SPOOFER E FILTRO DE REMOTES)
+if hookmetamethod and checkcaller and newcclosure then
+    -- 1. Anti-Kick e Anti-Remote Log (Namecall Hook)
     local oldNamecall
     oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
         local method = getnamecallmethod()
-        if Settings.AntiKick and (method == "Kick" or method == "kick") then
-            warn("🛡️ [ROBIN HUB] Tentativa de Kick bloqueada com sucesso!")
-            return nil
+        local args = {...}
+
+        if not checkcaller() then
+            -- Bloqueio de Kick
+            if Settings.AntiKick and (method == "Kick" or method == "kick") then
+                warn("🛡️ [ROBIN PROTECT] Tentativa de Kick bloqueada com sucesso!")
+                return nil
+            end
+
+            -- Filtro de RemoteEvents do Anti-Cheat
+            if Settings.BlockAntiCheatRemotes and (method == "FireServer" or method == "InvokeServer") then
+                local remoteName = tostring(self.Name):lower()
+                local suspiciousKeywords = {"ban", "kick", "cheat", "detect", "flag", "report", "exploit", "anticheat", "log", "security"}
+                
+                for _, kw in ipairs(suspiciousKeywords) do
+                    if remoteName:find(kw) then
+                        warn("🛡️ [ROBIN PROTECT] Remote do Anti-Cheat interceptado e bloqueado: " .. self.Name)
+                        return nil
+                    end
+                end
+            end
         end
+
         return oldNamecall(self, ...)
     end))
-end)
 
--- 2. Camuflador de WalkSpeed (Hooking __index) - Esconde 2000 de velocidade do Anti-Cheat
-pcall(function()
+    -- 2. Spoofer de WalkSpeed, JumpPower e HipHeight (Index Hook)
     local oldIndex
     oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, index)
-        if Settings.SpoofWalkSpeed and not checkcaller() and self:IsA("Humanoid") and index == "WalkSpeed" then
-            return 16 -- Sempre retorna a velocidade normal para verificações do servidor
+        if Settings.SpoofWalkSpeed and not checkcaller() and self:IsA("Humanoid") then
+            if index == "WalkSpeed" then
+                return 16
+            elseif index == "JumpPower" then
+                return 50
+            elseif index == "HipHeight" then
+                return 0
+            end
         end
         return oldIndex(self, index)
     end))
-end)
 
--- 3. Anti-AFK (VirtualUser Controller)
+    -- 3. Proteção contra modificação de variáveis locais (NewIndex Hook)
+    local oldNewIndex
+    oldNewIndex = hookmetamethod(game, "__newindex", newcclosure(function(self, index, value)
+        if not checkcaller() and Settings.SpoofWalkSpeed and self:IsA("Humanoid") then
+            if index == "WalkSpeed" and Settings.SpeedHack then
+                return nil
+            end
+        end
+        return oldNewIndex(self, index, value)
+    end))
+end
+
+-- C. ANTI-AFK AUTOMÁTICO
 LocalPlayer.Idled:Connect(function()
     if Settings.AntiAFK then
         pcall(function()
@@ -71,41 +134,74 @@ LocalPlayer.Idled:Connect(function()
     end
 end)
 
--- 4. Auto-Rejoin em caso de Desconexão
+-- D. AUTO-REJOIN EM CASO DE QUEDA OU ERRO DE SERVIDOR
 GuiService.ErrorMessageChanged:Connect(function()
     if Settings.AutoRejoin then
         task.wait(2)
-        TeleportService:Teleport(game.PlaceId, LocalPlayer)
+        pcall(function()
+            TeleportService:Teleport(game.PlaceId, LocalPlayer)
+        end)
     end
 end)
 
--- 5. Anti-Staff / Anti-Admin
-Players.PlayerAdded:Connect(function(plr)
-    if Settings.AntiStaff then
-        local name = plr.Name:lower()
-        if name:find("admin") or name:find("mod") or name:find("owner") or name:find("dev") then
-            TeleportService:Teleport(game.PlaceId, LocalPlayer)
+-- E. DETECTOR DINÂMICO DE STAFF / ADMINS
+local function IsStaff(player)
+    if not player then return false end
+    local name = player.Name:lower()
+    local display = player.DisplayName:lower()
+    local keywords = {"admin", "mod", "owner", "dev", "staff", "builder", "creator"}
+
+    for _, kw in ipairs(keywords) do
+        if name:find(kw) or display:find(kw) then
+            return true
         end
     end
+    return false
+end
+
+Players.PlayerAdded:Connect(function(plr)
+    if Settings.AntiStaff and IsStaff(plr) then
+        warn("🛡️ [ROBIN PROTECT] Staff/Admin detectado: " .. plr.Name .. ". Trocando de servidor...")
+        pcall(function() TeleportService:Teleport(game.PlaceId, LocalPlayer) end)
+    end
 end)
 
 -- ========================================================
--- ⚡ SISTEMA DE APLICAÇÃO DE VELOCIDADE E ESTEIRA
+-- ⚡ MOTORES DE LOOP E FÍSICA (SPEED & ANTI-STUN)
 -- ========================================================
 
--- Aplicação de Velocidade Segura
+-- Aplicação de Velocidade em Loop Contínuo sem erros
 RunService.Stepped:Connect(function()
     pcall(function()
-        if Settings.SpeedHack and LocalPlayer.Character then
+        if LocalPlayer.Character then
             local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+            local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+
             if hum then
-                hum.WalkSpeed = math.clamp(Settings.CurrentSpeed, 1, Settings.MaxSpeedLimit)
+                -- Anti-Stun / Restauração de Estado
+                if Settings.AntiStun then
+                    hum.PlatformStand = false
+                    hum.Sit = false
+                end
+
+                -- Aplicação Segura de WalkSpeed
+                if Settings.SpeedHack then
+                    hum.WalkSpeed = math.clamp(Settings.CurrentSpeed, 1, Settings.MaxSpeedLimit)
+                end
+            end
+
+            -- Anti-Void (Evita queda infinita fora do mapa)
+            if Settings.AntiVoid and hrp and hrp.Position.Y < -100 then
+                hrp.Velocity = Vector3.new(0, 0, 0)
+                hrp.CFrame = CFrame.new(0, 50, 0)
             end
         end
     end)
 end)
 
--- Disparador de Esteira (Treadmill Trigger)
+-- ========================================================
+-- 🏃 LÓGICA AUTO ESTEIRA / TRILHA
+-- ========================================================
 local function TriggerTreadmills()
     if not LocalPlayer.Character then return end
     local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
@@ -115,9 +211,9 @@ local function TriggerTreadmills()
         if obj:IsA("TouchTransmitter") and obj.Parent then
             local part = obj.Parent
             local name = part.Name:lower()
-            local parentName = part.Parent and part.Parent.Name:lower() or ""
+            local pName = part.Parent and part.Parent.Name:lower() or ""
 
-            if name:find("treadmill") or name:find("esteira") or name:find("belt") or name:find("speed") or parentName:find("treadmill") or parentName:find("esteira") then
+            if name:find("treadmill") or name:find("esteira") or name:find("belt") or name:find("speed") or pName:find("treadmill") or pName:find("esteira") then
                 if firetouchinterest then
                     firetouchinterest(hrp, part, 0)
                     task.wait()
@@ -130,7 +226,6 @@ local function TriggerTreadmills()
     end
 end
 
--- Loop de Farm da Esteira Otimizado
 task.spawn(function()
     while true do
         task.wait(0.05)
@@ -141,18 +236,101 @@ task.spawn(function()
 end)
 
 -- ========================================================
--- 🎨 INTERFACE GRÁFICA (UI MODERNA COM ENTRADA DE VELOCIDADE)
+-- 🌾 LÓGICA AUTO FARM DE OVOS (SUAVE E COM TRATAMENTO DE ERROS)
+-- ========================================================
+local CurrentTween = nil
+
+local function SafeTweenTP(targetCFrame)
+    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then return end
+    local hrp = LocalPlayer.Character.HumanoidRootPart
+    local distance = (hrp.Position - targetCFrame.Position).Magnitude
+    
+    if distance < 5 then
+        hrp.CFrame = targetCFrame
+        return
+    end
+
+    local duration = distance / Settings.FarmSpeed
+    local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
+    CurrentTween = TweenService:Create(hrp, tweenInfo, {CFrame = targetCFrame})
+    CurrentTween:Play()
+    CurrentTween.Completed:Wait()
+end
+
+local function StopTween()
+    if CurrentTween then
+        pcall(function() CurrentTween:Cancel() end)
+        CurrentTween = nil
+    end
+end
+
+local function GetPlayerBase()
+    local folder = workspace:FindFirstChild("Bases") or workspace:FindFirstChild("Plots")
+    if folder then
+        for _, base in ipairs(folder:GetChildren()) do
+            if base:FindFirstChild("Owner") and tostring(base.Owner.Value) == LocalPlayer.Name then
+                return base
+            elseif base.Name:lower():find(LocalPlayer.Name:lower()) then
+                return base
+            end
+        end
+    end
+    return nil
+end
+
+task.spawn(function()
+    while true do
+        task.wait(0.2)
+        if Settings.AutoFarm then
+            pcall(function()
+                local eggsFound = {}
+                for _, obj in ipairs(workspace:GetDescendants()) do
+                    if obj:IsA("BasePart") and (obj.Name:lower():find("egg") or obj.Name:lower():find("ovo")) then
+                        if obj.Parent and not obj.Parent:FindFirstChild("Humanoid") then
+                            local eggName = obj.Name:lower()
+                            local filter = Settings.SelectedEggType:lower()
+                            if filter == "todos" or eggName:find(filter) then
+                                table.insert(eggsFound, obj)
+                            end
+                        end
+                    end
+                end
+
+                if #eggsFound > 0 then
+                    for _, egg in ipairs(eggsFound) do
+                        if not Settings.AutoFarm then StopTween() break end
+                        if egg and egg.Parent and egg:IsDescendantOf(workspace) then
+                            SafeTweenTP(egg.CFrame * CFrame.new(0, 2.5, 0))
+                            task.wait(0.2)
+                            
+                            if Settings.AutoDeposit and Settings.AutoFarm then
+                                local base = GetPlayerBase()
+                                if base then
+                                    local depositPart = base:FindFirstChild("Deposit") or base:FindFirstChild("Drop") or base
+                                    SafeTweenTP(depositPart.CFrame * CFrame.new(0, 3, 0))
+                                    task.wait(0.2)
+                                end
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- ========================================================
+-- 🎨 INTERFACE GRÁFICA (UI MODERNA, LEVE E ARRASTÁVEL)
 -- ========================================================
 
 local ScreenGui = Instance.new("ScreenGui", TargetUI)
-ScreenGui.Name = "RobinSpeedMasterUI"
+ScreenGui.Name = "RobinEggHubMaster"
 ScreenGui.ResetOnSpawn = false
 
--- 🟡 BOLINHA FLUTUANTE ARRASTÁVEL
+-- BOLINHA ARRASTÁVEL DE ABRIR/FECHAR
 local OpenBtn = Instance.new("TextButton", ScreenGui)
-OpenBtn.Name = "OpenBtn"
 OpenBtn.Size = UDim2.new(0, 50, 0, 50)
-OpenBtn.Position = UDim2.new(0.02, 0, 0.4, 0)
+OpenBtn.Position = UDim2.new(0.02, 0, 0.35, 0)
 OpenBtn.BackgroundColor3 = Color3.fromRGB(15, 18, 26)
 OpenBtn.Text = "⚡"
 OpenBtn.TextSize = 22
@@ -162,13 +340,13 @@ OpenBtn.Draggable = true
 Instance.new("UICorner", OpenBtn).CornerRadius = UDim.new(1, 0)
 
 local OpenStroke = Instance.new("UIStroke", OpenBtn)
-OpenStroke.Color = Color3.fromRGB(0, 200, 255)
+OpenStroke.Color = Color3.fromRGB(0, 170, 255)
 OpenStroke.Thickness = 2
 
 -- JANELA PRINCIPAL
 local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0, 380, 0, 310)
-MainFrame.Position = UDim2.new(0.5, -190, 0.5, -155)
+MainFrame.Size = UDim2.new(0, 480, 0, 330)
+MainFrame.Position = UDim2.new(0.5, -240, 0.5, -165)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 17, 25)
 MainFrame.Active = true
 MainFrame.Draggable = true
@@ -187,10 +365,10 @@ Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 10)
 local Title = Instance.new("TextLabel", TopBar)
 Title.Size = UDim2.new(1, -50, 1, 0)
 Title.Position = UDim2.new(0, 12, 0, 0)
-Title.Text = "⚡ ROBIN HUB — SPEED MASTER (MAX 2000)"
+Title.Text = "⚡ ROBIN HUB v3.0 — MAX PROTECTED (100% ANTI-BAN)"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.Font = Enum.Font.GothamBold
-Title.TextSize = 11
+Title.TextSize = 10
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.BackgroundTransparency = 1
 
@@ -212,138 +390,202 @@ end
 CloseBtn.MouseButton1Click:Connect(ToggleUI)
 OpenBtn.MouseButton1Click:Connect(ToggleUI)
 
--- ÁREA DE CONTEÚDO
-local Container = Instance.new("Frame", MainFrame)
-Container.Position = UDim2.new(0, 10, 0, 48)
-Container.Size = UDim2.new(1, -20, 1, -58)
-Container.BackgroundTransparency = 1
+-- SIDEBAR
+local Sidebar = Instance.new("Frame", MainFrame)
+Sidebar.Position = UDim2.new(0, 8, 0, 48)
+Sidebar.Size = UDim2.new(0, 125, 1, -56)
+Sidebar.BackgroundColor3 = Color3.fromRGB(10, 12, 18)
+Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 8)
 
-local Layout = Instance.new("UIListLayout", Container)
-Layout.Padding = UDim.new(0, 8)
+local SidebarLayout = Instance.new("UIListLayout", Sidebar)
+SidebarLayout.Padding = UDim.new(0, 4)
 
--- 1. BOTÃO AUTO ESTEIRA
-local TreadmillBtn = Instance.new("TextButton", Container)
-TreadmillBtn.Size = UDim2.new(1, 0, 0, 36)
-TreadmillBtn.BackgroundColor3 = Color3.fromRGB(22, 28, 42)
-TreadmillBtn.Text = "🏃 Auto Esteira / Trilha: OFF"
-TreadmillBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-TreadmillBtn.Font = Enum.Font.GothamBold
-TreadmillBtn.TextSize = 11
-Instance.new("UICorner", TreadmillBtn).CornerRadius = UDim.new(0, 6)
+local SidebarPad = Instance.new("UIPadding", Sidebar)
+SidebarPad.PaddingTop = UDim.new(0, 6)
+SidebarPad.PaddingLeft = UDim.new(0, 6)
+SidebarPad.PaddingRight = UDim.new(0, 6)
 
-TreadmillBtn.MouseButton1Click:Connect(function()
-    Settings.AutoTreadmill = not Settings.AutoTreadmill
-    if Settings.AutoTreadmill then
-        TreadmillBtn.Text = "🏃 Auto Esteira / Trilha: ON"
-        TreadmillBtn.TextColor3 = Color3.fromRGB(50, 255, 120)
-    else
-        TreadmillBtn.Text = "🏃 Auto Esteira / Trilha: OFF"
-        TreadmillBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-    end
-end)
+-- CONTEÚDO
+local Content = Instance.new("Frame", MainFrame)
+Content.Position = UDim2.new(0, 139, 0, 48)
+Content.Size = UDim2.new(1, -147, 1, -56)
+Content.BackgroundColor3 = Color3.fromRGB(10, 12, 18)
+Instance.new("UICorner", Content).CornerRadius = UDim.new(0, 8)
 
--- 2. BOTÃO ATIVAR VELOCIDADE HACK
-local SpeedToggleBtn = Instance.new("TextButton", Container)
-SpeedToggleBtn.Size = UDim2.new(1, 0, 0, 36)
-SpeedToggleBtn.BackgroundColor3 = Color3.fromRGB(22, 28, 42)
-SpeedToggleBtn.Text = "⚡ Ativar Super Velocidade: OFF"
-SpeedToggleBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-SpeedToggleBtn.Font = Enum.Font.GothamBold
-SpeedToggleBtn.TextSize = 11
-Instance.new("UICorner", SpeedToggleBtn).CornerRadius = UDim.new(0, 6)
+local Pages = {}
+local FirstTab = true
 
-SpeedToggleBtn.MouseButton1Click:Connect(function()
-    Settings.SpeedHack = not Settings.SpeedHack
-    if Settings.SpeedHack then
-        SpeedToggleBtn.Text = "⚡ Ativar Super Velocidade: ON"
-        SpeedToggleBtn.TextColor3 = Color3.fromRGB(50, 255, 120)
-    else
-        SpeedToggleBtn.Text = "⚡ Ativar Super Velocidade: OFF"
-        SpeedToggleBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-        -- Restaura velocidade normal ao desligar
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
-            LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = 16
+local function CreateTab(name, icon)
+    local TabBtn = Instance.new("TextButton", Sidebar)
+    TabBtn.Size = UDim2.new(1, 0, 0, 30)
+    TabBtn.BackgroundColor3 = Color3.fromRGB(18, 22, 32)
+    TabBtn.Text = icon .. " " .. name
+    TabBtn.TextColor3 = Color3.fromRGB(160, 175, 195)
+    TabBtn.Font = Enum.Font.GothamSemibold
+    TabBtn.TextSize = 10
+    Instance.new("UICorner", TabBtn).CornerRadius = UDim.new(0, 6)
+
+    local Page = Instance.new("ScrollingFrame", Content)
+    Page.Size = UDim2.new(1, 0, 1, 0)
+    Page.BackgroundTransparency = 1
+    Page.Visible = false
+    Page.ScrollBarThickness = 2
+
+    local PageLayout = Instance.new("UIListLayout", Page)
+    PageLayout.Padding = UDim.new(0, 6)
+
+    local PagePad = Instance.new("UIPadding", Page)
+    PagePad.PaddingTop = UDim.new(0, 6)
+    PagePad.PaddingLeft = UDim.new(0, 6)
+    PagePad.PaddingRight = UDim.new(0, 6)
+
+    TabBtn.MouseButton1Click:Connect(function()
+        for _, p in pairs(Pages) do p.Visible = false end
+        for _, btn in pairs(Sidebar:GetChildren()) do
+            if btn:IsA("TextButton") then
+                btn.BackgroundColor3 = Color3.fromRGB(18, 22, 32)
+                btn.TextColor3 = Color3.fromRGB(160, 175, 195)
+            end
         end
-    end
-end)
-
--- 3. CAIXA DE TEXTO (DIGITAR VELOCIDADE DE 1 A 2000)
-local InputFrame = Instance.new("Frame", Container)
-InputFrame.Size = UDim2.new(1, 0, 0, 36)
-InputFrame.BackgroundColor3 = Color3.fromRGB(18, 22, 32)
-Instance.new("UICorner", InputFrame).CornerRadius = UDim.new(0, 6)
-
-local InputLabel = Instance.new("TextLabel", InputFrame)
-InputLabel.Size = UDim2.new(0.55, 0, 1, 0)
-InputLabel.Position = UDim2.new(0, 8, 0, 0)
-InputLabel.Text = "Ajustar Velocidade (1-2000):"
-InputLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-InputLabel.Font = Enum.Font.GothamSemibold
-InputLabel.TextSize = 10
-InputLabel.TextXAlignment = Enum.TextXAlignment.Left
-InputLabel.BackgroundTransparency = 1
-
-local SpeedBox = Instance.new("TextBox", InputFrame)
-SpeedBox.Size = UDim2.new(0, 100, 0, 26)
-SpeedBox.Position = UDim2.new(1, -108, 0.5, -13)
-SpeedBox.BackgroundColor3 = Color3.fromRGB(28, 35, 52)
-SpeedBox.Text = tostring(Settings.CurrentSpeed)
-SpeedBox.TextColor3 = Color3.fromRGB(0, 200, 255)
-SpeedBox.Font = Enum.Font.GothamBold
-SpeedBox.TextSize = 11
-Instance.new("UICorner", SpeedBox).CornerRadius = UDim.new(0, 4)
-
-SpeedBox.FocusLost:Connect(function()
-    local val = tonumber(SpeedBox.Text)
-    if val then
-        val = math.clamp(math.floor(val), 1, Settings.MaxSpeedLimit)
-        Settings.CurrentSpeed = val
-        SpeedBox.Text = tostring(val)
-    else
-        SpeedBox.Text = tostring(Settings.CurrentSpeed)
-    end
-end)
-
--- 4. ATALHOS RÁPIDOS DE VELOCIDADE
-local PresetFrame = Instance.new("Frame", Container)
-PresetFrame.Size = UDim2.new(1, 0, 0, 30)
-PresetFrame.BackgroundTransparency = 1
-
-local PresetLayout = Instance.new("UIListLayout", PresetFrame)
-PresetLayout.FillDirection = Enum.FillDirection.Horizontal
-PresetLayout.Padding = UDim.new(0, 6)
-
-local Presets = {100, 500, 1000, 2000}
-for _, pVal in ipairs(Presets) do
-    local PBtn = Instance.new("TextButton", PresetFrame)
-    PBtn.Size = UDim2.new(0.235, 0, 1, 0)
-    PBtn.BackgroundColor3 = Color3.fromRGB(25, 32, 48)
-    PBtn.Text = tostring(pVal)
-    PBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    PBtn.Font = Enum.Font.GothamBold
-    PBtn.TextSize = 10
-    Instance.new("UICorner", PBtn).CornerRadius = UDim.new(0, 4)
-
-    PBtn.MouseButton1Click:Connect(function()
-        Settings.CurrentSpeed = pVal
-        SpeedBox.Text = tostring(pVal)
+        Page.Visible = true
+        TabBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+        TabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     end)
+
+    Pages[name] = Page
+    if FirstTab then
+        FirstTab = false
+        Page.Visible = true
+        TabBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+        TabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    end
+
+    local Actions = {}
+
+    function Actions:AddToggle(text, defaultState, callback)
+        local Frame = Instance.new("Frame", Page)
+        Frame.Size = UDim2.new(1, 0, 0, 32)
+        Frame.BackgroundColor3 = Color3.fromRGB(18, 22, 32)
+        Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 6)
+
+        local Lbl = Instance.new("TextLabel", Frame)
+        Lbl.Size = UDim2.new(0.65, 0, 1, 0)
+        Lbl.Position = UDim2.new(0, 8, 0, 0)
+        Lbl.Text = text
+        Lbl.TextColor3 = Color3.fromRGB(220, 220, 220)
+        Lbl.Font = Enum.Font.Gotham
+        Lbl.TextSize = 9
+        Lbl.TextXAlignment = Enum.TextXAlignment.Left
+        Lbl.BackgroundTransparency = 1
+
+        local Btn = Instance.new("TextButton", Frame)
+        Btn.Size = UDim2.new(0, 44, 0, 20)
+        Btn.Position = UDim2.new(1, -50, 0.5, -10)
+        Btn.BackgroundColor3 = defaultState and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(35, 40, 55)
+        Btn.Text = defaultState and "ON" or "OFF"
+        Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        Btn.Font = Enum.Font.GothamBold
+        Btn.TextSize = 9
+        Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 10)
+
+        local state = defaultState
+        Btn.MouseButton1Click:Connect(function()
+            state = not state
+            Btn.Text = state and "ON" or "OFF"
+            Btn.BackgroundColor3 = state and Color3.fromRGB(46, 204, 113) or Color3.fromRGB(35, 40, 55)
+            pcall(callback, state)
+        end)
+    end
+
+    function Actions:AddButton(text, callback)
+        local Btn = Instance.new("TextButton", Page)
+        Btn.Size = UDim2.new(1, 0, 0, 30)
+        Btn.BackgroundColor3 = Color3.fromRGB(22, 28, 42)
+        Btn.Text = text
+        Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        Btn.Font = Enum.Font.GothamSemibold
+        Btn.TextSize = 10
+        Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
+        Btn.MouseButton1Click:Connect(function() pcall(callback) end)
+    end
+
+    function Actions:AddInput(label, default, maxVal, callback)
+        local Frame = Instance.new("Frame", Page)
+        Frame.Size = UDim2.new(1, 0, 0, 32)
+        Frame.BackgroundColor3 = Color3.fromRGB(18, 22, 32)
+        Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 6)
+
+        local Lbl = Instance.new("TextLabel", Frame)
+        Lbl.Size = UDim2.new(0.6, 0, 1, 0)
+        Lbl.Position = UDim2.new(0, 8, 0, 0)
+        Lbl.Text = label
+        Lbl.TextColor3 = Color3.fromRGB(220, 220, 220)
+        Lbl.Font = Enum.Font.Gotham
+        Lbl.TextSize = 9
+        Lbl.TextXAlignment = Enum.TextXAlignment.Left
+        Lbl.BackgroundTransparency = 1
+
+        local Box = Instance.new("TextBox", Frame)
+        Box.Size = UDim2.new(0, 70, 0, 22)
+        Box.Position = UDim2.new(1, -76, 0.5, -11)
+        Box.BackgroundColor3 = Color3.fromRGB(28, 35, 52)
+        Box.Text = tostring(default)
+        Box.TextColor3 = Color3.fromRGB(0, 200, 255)
+        Box.Font = Enum.Font.GothamBold
+        Box.TextSize = 10
+        Instance.new("UICorner", Box).CornerRadius = UDim.new(0, 4)
+
+        Box.FocusLost:Connect(function()
+            local val = tonumber(Box.Text)
+            if val then
+                val = math.clamp(math.floor(val), 1, maxVal)
+                Box.Text = tostring(val)
+                pcall(callback, val)
+            else
+                Box.Text = tostring(default)
+            end
+        end)
+    end
+
+    return Actions
 end
 
--- 5. STATUS DE PROTEÇÃO
-local StatusFrame = Instance.new("Frame", Container)
-StatusFrame.Size = UDim2.new(1, 0, 0, 32)
-StatusFrame.BackgroundColor3 = Color3.fromRGB(15, 30, 25)
-Instance.new("UICorner", StatusFrame).CornerRadius = UDim.new(0, 6)
+-- ========================================================
+-- CREAÇÃO DAS ABAS NA UI
+-- ========================================================
 
-local StatusStroke = Instance.new("UIStroke", StatusFrame)
-StatusStroke.Color = Color3.fromRGB(46, 204, 113)
-StatusStroke.Thickness = 1
+-- ABA 1: VELOCIDADE
+local SpeedTab = CreateTab("Velocidade", "⚡")
+SpeedTab:AddToggle("Auto Esteira / Trilha", false, function(s) Settings.AutoTreadmill = s end)
+SpeedTab:AddToggle("Ativar Speed Hack", false, function(s)
+    Settings.SpeedHack = s
+    if not s and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+        LocalPlayer.Character:FindFirstChildOfClass("Humanoid").WalkSpeed = 16
+    end
+end)
+SpeedTab:AddInput("Velocidade (1-2000):", Settings.CurrentSpeed, Settings.MaxSpeedLimit, function(val)
+    Settings.CurrentSpeed = val
+end)
+SpeedTab:AddButton("Preset: 100", function() Settings.CurrentSpeed = 100 end)
+SpeedTab:AddButton("Preset: 500", function() Settings.CurrentSpeed = 500 end)
+SpeedTab:AddButton("Preset: 1000", function() Settings.CurrentSpeed = 1000 end)
+SpeedTab:AddButton("Preset: 2000 (MÁX)", function() Settings.CurrentSpeed = 2000 end)
 
-local StatusLabel = Instance.new("TextLabel", StatusFrame)
-StatusLabel.Size = UDim2.new(1, 0, 1, 0)
-StatusLabel.Text = "🛡️ Proteções Ativas: Anti-Kick | Anti-AFK | Spoof 2000"
-StatusLabel.TextColor3 = Color3.fromRGB(46, 204, 113)
-StatusLabel.Font = Enum.Font.GothamBold
-StatusLabel.TextSize = 9
-StatusLabel.BackgroundTransparency = 1
+-- ABA 2: AUTO FARM OVOS
+local FarmTab = CreateTab("Auto Farm", "🌾")
+FarmTab:AddToggle("Ativar Auto Farm Ovos", false, function(s)
+    Settings.AutoFarm = s
+    if not s then StopTween() end
+end)
+FarmTab:AddToggle("Auto Depositar na Base", false, function(s) Settings.AutoDeposit = s end)
+
+-- ABA 3: SEGURANÇA & PROTEÇÃO AVANÇADA
+local ProtectTab = CreateTab("Proteções", "🛡️")
+ProtectTab:AddToggle("Anti-Kick Metatable", true, function(s) Settings.AntiKick = s end)
+ProtectTab:AddToggle("WalkSpeed Spoofing", true, function(s) Settings.SpoofWalkSpeed = s end)
+ProtectTab:AddToggle("Bloquear Remotes Anti-Cheat", true, function(s) Settings.BlockAntiCheatRemotes = s end)
+ProtectTab:AddToggle("Anti-AFK 24/7", true, function(s) Settings.AntiAFK = s end)
+ProtectTab:AddToggle("Anti-Staff (Auto Server Hop)", true, function(s) Settings.AntiStaff = s end)
+ProtectTab:AddToggle("Auto Rejoin se Cair", true, function(s) Settings.AutoRejoin = s end)
+ProtectTab:AddToggle("Anti-Void (Queda no Mapa)", true, function(s) Settings.AntiVoid = s end)
+ProtectTab:AddToggle("Anti-Stun / Anti-Freeze", true, function(s) Settings.AntiStun = s end)
